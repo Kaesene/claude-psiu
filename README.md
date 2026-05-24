@@ -65,13 +65,17 @@ You can also edit `~/.claude/psiu.json` by hand — it's just JSON. Missing keys
 
 ### Interactive menu (no Claude tokens)
 
-For browsing without remembering subcommand syntax, run the menu mode **in your own terminal** (or via Claude Code's `!` prefix which gives you a real shell):
+The easiest way: run the slash command which opens the menu in a **new terminal window**:
 
 ```
-!python "~/.claude/plugins/cache/claude-psiu/psiu/<version>/scripts/psiu-config.py" menu
+/psiu:psiu-menu
 ```
 
-This launches a numbered TUI that walks you through every option, shows the current value inline, and writes to `~/.claude/psiu.json` directly. Zero AI involvement — no tokens, no latency.
+Cross-platform — macOS opens Terminal.app, Windows opens cmd, Linux picks the first available terminal emulator. Navigate by number; every change saves to `~/.claude/psiu.json` immediately. Close the window when done.
+
+Zero AI involvement after launch — no tokens, no latency.
+
+(Note: `!python <path> menu` inside Claude Code's chat works too, but the chat's shell doesn't always provide a real TTY, so the menu may exit on the first prompt. `/psiu:psiu-menu` avoids that by spawning a separate terminal.)
 
 ## Example psiu.json
 
