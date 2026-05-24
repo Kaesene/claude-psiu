@@ -31,7 +31,7 @@ if [ "$NOTIFY_ENABLE_TTS" = "1" ] && [ -n "$PHRASE" ]; then
     args=()
     [ -n "${NOTIFY_VOICE:-}" ] && args+=(-l "$NOTIFY_VOICE")
     [ -n "${NOTIFY_RATE:-}" ]  && args+=(-r "$NOTIFY_RATE")
-    spd-say "${args[@]}" "$PHRASE" >/dev/null 2>&1 &
+    spd-say ${args[@]+"${args[@]}"} "$PHRASE" >/dev/null 2>&1 &
   elif command -v espeak >/dev/null 2>&1; then
     espeak "$PHRASE" >/dev/null 2>&1 &
   fi

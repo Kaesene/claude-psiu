@@ -1,6 +1,6 @@
 {
   "name": "psiu",
-  "version": "0.3.0",
+  "version": "0.3.1",
   "description": "Psiu! Sound + toast + TTS notifications on Stop and Notification events. Cross-platform.",
   "author": {
     "name": "Kaesene",

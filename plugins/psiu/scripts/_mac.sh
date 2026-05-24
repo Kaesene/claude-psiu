@@ -41,11 +41,14 @@ if [ "$NOTIFY_ENABLE_TOAST" = "1" ]; then
 fi
 
 # ---- TTS -------------------------------------------------------------------
+# Note: "${args[@]}" on an empty array fails under `set -u` in macOS's default
+# bash 3.2 (silently breaks `say`). Use the `${array[@]+"${array[@]}"}` form
+# which expands to nothing when the array is empty.
 if [ "$NOTIFY_ENABLE_TTS" = "1" ] && [ -n "$PHRASE" ]; then
   args=()
   [ -n "${NOTIFY_VOICE:-}" ] && args+=(-v "$NOTIFY_VOICE")
-  [ -n "${NOTIFY_RATE:-}" ] && args+=(-r "$NOTIFY_RATE")
-  say "${args[@]}" "$PHRASE" >/dev/null 2>&1 &
+  [ -n "${NOTIFY_RATE:-}" ]  && args+=(-r "$NOTIFY_RATE")
+  say ${args[@]+"${args[@]}"} "$PHRASE" >/dev/null 2>&1 &
 fi
 
 wait
