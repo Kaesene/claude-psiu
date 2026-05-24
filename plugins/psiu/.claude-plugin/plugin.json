@@ -1,0 +1,13 @@
+{
+  "name": "psiu",
+  "version": "0.1.0",
+  "description": "Psiu! Sound + toast + TTS notifications on Stop and Notification events. Cross-platform.",
+  "author": {
+    "name": "Kaesene",
+    "url": "https://github.com/Kaesene"
+  },
+  "homepage": "https://github.com/Kaesene/claude-psiu",
+  "repository": "https://github.com/Kaesene/claude-psiu",
+  "license": "MIT",
+  "keywords": ["hooks", "notifications", "sound", "tts", "toast", "cross-platform", "psiu"]
+}
