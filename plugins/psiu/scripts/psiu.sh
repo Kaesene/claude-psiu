@@ -13,6 +13,15 @@ if [ ! -t 0 ]; then
   PAYLOAD="$(cat)"
 fi
 
+# ---- Load user config from ~/.claude/psiu.json (via python) ---------------
+# Exports NOTIFY_* env vars only for keys the user has set; others fall through
+# to the defaults below. Silently no-op if python isn't available.
+if command -v python3 >/dev/null 2>&1; then
+  eval "$(python3 "$SCRIPT_DIR/psiu-config.py" --export 2>/dev/null)" || true
+elif command -v python >/dev/null 2>&1; then
+  eval "$(python "$SCRIPT_DIR/psiu-config.py" --export 2>/dev/null)" || true
+fi
+
 # ---- Defaults --------------------------------------------------------------
 : "${NOTIFY_ENABLE_SOUND:=1}"
 : "${NOTIFY_ENABLE_TOAST:=1}"

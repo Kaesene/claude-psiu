@@ -12,5 +12,5 @@ bash "${CLAUDE_PLUGIN_ROOT}/scripts/psiu.sh" test "$ARGUMENTS"
 If `$ARGUMENTS` is provided, the TTS will speak it. Otherwise it says "teste de notificação".
 
 Examples:
-- `/psiu-test` — default test phrase
-- `/psiu-test ola mundo` — custom phrase
+- `/psiu:psiu-test` — default test phrase
+- `/psiu:psiu-test ola mundo` — custom phrase
