@@ -26,14 +26,18 @@ case "$(uname -s)" in
     ;;
 
   MINGW*|MSYS*|CYGWIN*|Windows_NT)
-    # Windows: convert path to native form so cmd can read it
+    # Windows: convert path to native form so cmd can read it.
     WIN_PATH="$PY_SCRIPT"
     if command -v cygpath >/dev/null 2>&1; then
       WIN_PATH="$(cygpath -w "$PY_SCRIPT")"
     fi
-    # `start ""` opens a new console window, `cmd /k` keeps it open after the
-    # script exits (so the user sees the final state and closes when ready).
-    cmd.exe //c "start \"\" cmd /k python \"$WIN_PATH\" menu"
+    # Use PowerShell Start-Process — reliably opens a new console window
+    # regardless of parent shell. `cmd /k` keeps the new window open after
+    # the python script exits so the user can read final state.
+    # Single-quoted PS literal avoids $expansion conflicts; the path is
+    # interpolated by bash before PS sees it.
+    powershell.exe -NoProfile -Command \
+      "Start-Process cmd -ArgumentList '/k python \"$WIN_PATH\" menu'"
     ;;
 
   Linux*)
