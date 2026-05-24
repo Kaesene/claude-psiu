@@ -34,9 +34,19 @@ Or with a custom phrase:
 /psiu-test ola mundo
 ```
 
-## Customize
+## Configure interactively
 
-Everything is configurable via environment variables in your `~/.claude/settings.json` `env` block. All optional — defaults are sensible.
+Open the menu:
+
+```
+/psiu-config
+```
+
+Walks you through voice, phrases, sounds, toast text, quiet hours, channels on/off, webhook — and writes the result to your `~/.claude/settings.json`.
+
+## Customize manually
+
+If you prefer editing config by hand, all settings are environment variables in your `~/.claude/settings.json` `env` block. All optional — defaults are sensible.
 
 ### On / off
 
