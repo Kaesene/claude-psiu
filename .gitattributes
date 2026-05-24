@@ -1,0 +1,15 @@
+# Force LF for shell scripts so they work in Git Bash / WSL on Windows
+*.sh text eol=lf
+*.bash text eol=lf
+
+# JSON / Markdown / YAML — LF everywhere for consistency
+*.json text eol=lf
+*.md text eol=lf
+*.yml text eol=lf
+*.yaml text eol=lf
+
+# PowerShell scripts — CRLF is fine, but LF also works on Win10+
+*.ps1 text eol=lf
+
+# Default: let git auto-detect, normalize to LF on commit
+* text=auto eol=lf
