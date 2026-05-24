@@ -9,7 +9,7 @@
       "name": "psiu",
       "source": "./plugins/psiu",
       "description": "Psiu! — sound + toast + TTS notifications when Claude finishes a turn or needs you. Cross-platform (macOS, Windows, Linux) with quiet hours, voice selection, webhooks, and more.",
-      "version": "0.3.1"
+      "version": "0.4.0"
     }
   ]
 }

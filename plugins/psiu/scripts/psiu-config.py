@@ -424,12 +424,315 @@ Usage:
   /psiu:psiu-config voices               List available TTS voices on this OS
   /psiu:psiu-config sounds               List available system sounds on this OS
 
+Interactive menu (no Claude tokens — runs in your terminal):
+  !python "<plugin>/scripts/psiu-config.py" menu
+  (works only when invoked from a TTY, e.g. via Claude Code's `!` prefix)
+
 Config file: ~/.claude/psiu.json (separate from settings.json)
 """
 
 
 def cmd_help(args):
     print(HELP)
+
+
+# ---- Interactive menu ------------------------------------------------------
+
+def _prompt_str(label, current):
+    cur = f" [{current}]" if current else " [default]"
+    ans = input(f"  {label}{cur}\n  (Enter mantém · '-' apaga · ou digite novo): ").strip()
+    if ans == "":
+        return current, False  # keep
+    if ans == "-":
+        return None, True  # unset
+    return ans, True
+
+
+def _prompt_int(label, current, lo=None, hi=None):
+    cur = f" [{current}]" if current is not None else " [default]"
+    while True:
+        ans = input(f"  {label}{cur}\n  (Enter mantém · '-' apaga · número novo): ").strip()
+        if ans == "":
+            return current, False
+        if ans == "-":
+            return None, True
+        try:
+            v = int(ans)
+            if lo is not None and v < lo:
+                print(f"  min {lo}")
+                continue
+            if hi is not None and v > hi:
+                print(f"  max {hi}")
+                continue
+            return v, True
+        except ValueError:
+            print("  precisa ser número, tenta de novo")
+
+
+def _apply_change(dotted, new_value, changed):
+    if not changed:
+        return
+    cfg = load()
+    if new_value is None:
+        unset_path(cfg, dotted)
+    else:
+        set_path(cfg, dotted, new_value)
+    save(cfg)
+    print(f"  ✓ {dotted} → {new_value!r}")
+
+
+def _menu_voice():
+    while True:
+        c = merged()
+        print("\n--- Voz, velocidade, volume ---")
+        print(f"  1) Voz       [{c['voice'] or 'default'}]")
+        print(f"  2) Rate      [{c['rate'] if c['rate'] is not None else 'default'}]")
+        print(f"  3) Volume    [{c['volume'] if c['volume'] is not None else 'default'}]   (só Windows)")
+        print(f"  4) Listar vozes disponíveis no OS")
+        print(f"  0) Voltar")
+        ch = input("\n  > ").strip()
+        if ch in ("", "0", "q"):
+            return
+        if ch == "1":
+            val, changed = _prompt_str("Nome da voz", c["voice"])
+            _apply_change("voice", val, changed)
+        elif ch == "2":
+            val, changed = _prompt_int("Rate (Mac: wpm tipo 200; Win: -10..10)", c["rate"])
+            _apply_change("rate", val, changed)
+        elif ch == "3":
+            val, changed = _prompt_int("Volume 0-100 (só Windows)", c["volume"], 0, 100)
+            _apply_change("volume", val, changed)
+        elif ch == "4":
+            print()
+            cmd_voices([])
+            input("\n  (Enter pra continuar)")
+
+
+def _pick_event(allow=("stop", "stop_failure", "notification")):
+    print("\n  Evento:")
+    for i, ev in enumerate(allow, 1):
+        print(f"    {i}) {ev}")
+    print(f"    0) cancelar")
+    ans = input("  > ").strip()
+    if ans in ("", "0", "q"):
+        return None
+    if ans.isdigit():
+        i = int(ans) - 1
+        if 0 <= i < len(allow):
+            return allow[i]
+    return None
+
+
+def _menu_phrases():
+    while True:
+        c = merged()
+        print("\n--- Frases TTS ---")
+        print(f"  1) Frase fixa por evento")
+        print(f"     stop:          {c['phrases']['stop']!r}")
+        print(f"     stop_failure:  {c['phrases']['stop_failure']!r}")
+        print(f"     notification:  {c['phrases']['notification']!r}")
+        print(f"  2) Rotação aleatória (lista de frases)")
+        print(f"     stop:          {c['phrases_random']['stop'] or '(off)'}")
+        print(f"     notification:  {c['phrases_random']['notification'] or '(off)'}")
+        print(f"  0) Voltar")
+        ch = input("\n  > ").strip()
+        if ch in ("", "0", "q"):
+            return
+        if ch == "1":
+            ev = _pick_event()
+            if not ev:
+                continue
+            val, changed = _prompt_str(f"Frase pra {ev}", c["phrases"][ev])
+            _apply_change(f"phrases.{ev}", val, changed)
+        elif ch == "2":
+            ev = _pick_event(allow=("stop", "notification"))
+            if not ev:
+                continue
+            print("  Formato: 'frase 1|frase 2|frase 3'  (separado por |)")
+            val, changed = _prompt_str(f"Rotação pra {ev}", c["phrases_random"][ev])
+            _apply_change(f"phrases_random.{ev}", val, changed)
+
+
+def _menu_toasts():
+    while True:
+        c = merged()
+        print("\n--- Toast (popup) ---")
+        for i, ev in enumerate(EVENTS, 1):
+            t = c["toasts"][ev]
+            print(f"  {i}) {ev}: '{t['title']}' / '{t['body']}'")
+        print(f"  0) Voltar")
+        ch = input("\n  > ").strip()
+        if ch in ("", "0", "q"):
+            return
+        if ch.isdigit() and 1 <= int(ch) <= len(EVENTS):
+            ev = EVENTS[int(ch) - 1]
+            t = c["toasts"][ev]
+            title, ch_t = _prompt_str("Título", t["title"])
+            body, ch_b = _prompt_str("Corpo", t["body"])
+            cfg = load()
+            if ch_t:
+                if title is None:
+                    unset_path(cfg, f"toasts.{ev}.title")
+                else:
+                    set_path(cfg, f"toasts.{ev}.title", title)
+            if ch_b:
+                if body is None:
+                    unset_path(cfg, f"toasts.{ev}.body")
+                else:
+                    set_path(cfg, f"toasts.{ev}.body", body)
+            save(cfg)
+            print(f"  ✓ toast {ev} atualizado")
+
+
+def _menu_sounds():
+    while True:
+        c = merged()
+        print("\n--- Sons do sistema ---")
+        for i, ev in enumerate(EVENTS, 1):
+            print(f"  {i}) {ev}: {c['sounds'][ev] or 'default'}")
+        print(f"  {len(EVENTS)+1}) Listar sons disponíveis no OS")
+        print(f"  0) Voltar")
+        ch = input("\n  > ").strip()
+        if ch in ("", "0", "q"):
+            return
+        if ch == str(len(EVENTS) + 1):
+            print()
+            cmd_sounds([])
+            input("\n  (Enter pra continuar)")
+            continue
+        if ch.isdigit() and 1 <= int(ch) <= len(EVENTS):
+            ev = EVENTS[int(ch) - 1]
+            val, changed = _prompt_str(f"Som pra {ev}", c["sounds"][ev])
+            _apply_change(f"sounds.{ev}", val, changed)
+
+
+def _menu_channels():
+    while True:
+        c = merged()
+        print("\n--- Canais on/off ---")
+        for i, ch_name in enumerate(CHANNELS, 1):
+            state = "ON " if c["channels"][ch_name] else "OFF"
+            print(f"  {i}) {ch_name:<6}  [{state}]")
+        print(f"  0) Voltar")
+        ch = input("\n  Toggle qual? > ").strip()
+        if ch in ("", "0", "q"):
+            return
+        if ch.isdigit() and 1 <= int(ch) <= len(CHANNELS):
+            name = CHANNELS[int(ch) - 1]
+            new = not c["channels"][name]
+            cfg = load()
+            set_path(cfg, f"channels.{name}", new)
+            save(cfg)
+            print(f"  ✓ {name} → {'ON' if new else 'OFF'}")
+
+
+def _menu_smart():
+    while True:
+        c = merged()
+        print("\n--- Esperto ---")
+        print(f"  1) Quiet hours       [{c['quiet'] or 'off'}]")
+        print(f"  2) Incluir CWD no TTS [{'on' if c['include_cwd'] else 'off'}]")
+        print(f"  0) Voltar")
+        ch = input("\n  > ").strip()
+        if ch in ("", "0", "q"):
+            return
+        if ch == "1":
+            print("  Formato: HH-HH (ex: 22-7 silencia das 22h às 7h)")
+            val, changed = _prompt_str("Quiet hours", c["quiet"])
+            _apply_change("quiet", val, changed)
+        elif ch == "2":
+            cfg = load()
+            set_path(cfg, "include_cwd", not c["include_cwd"])
+            save(cfg)
+            print(f"  ✓ include_cwd → {'on' if not c['include_cwd'] else 'off'}")
+
+
+def _menu_webhook_log():
+    while True:
+        c = merged()
+        print("\n--- Webhook + log ---")
+        print(f"  1) Webhook URL  [{c['webhook_url'] or 'off'}]")
+        print(f"  2) Log file     [{c['log_file'] or 'off'}]")
+        print(f"  0) Voltar")
+        ch = input("\n  > ").strip()
+        if ch in ("", "0", "q"):
+            return
+        if ch == "1":
+            val, changed = _prompt_str("URL (POST JSON on each event)", c["webhook_url"])
+            _apply_change("webhook_url", val, changed)
+        elif ch == "2":
+            val, changed = _prompt_str("Path to log file", c["log_file"])
+            _apply_change("log_file", val, changed)
+
+
+def _menu_show():
+    cmd_show([])
+    input("\n(Enter pra continuar)")
+
+
+def _menu_reset():
+    print("\n--- Reset ---")
+    ans = input("  Apagar TODA a config (volta tudo aos defaults)? [y/N]: ").strip().lower()
+    if ans in ("y", "yes", "s", "sim"):
+        cmd_reset([])
+    else:
+        print("  cancelado.")
+
+
+def cmd_menu(args):
+    if not sys.stdin.isatty():
+        print("Menu mode precisa de terminal interativo.", file=sys.stderr)
+        print(f"Roda no teu shell (ou via prefixo ! do Claude Code):", file=sys.stderr)
+        print(f"  !python \"{__file__}\" menu", file=sys.stderr)
+        sys.exit(1)
+
+    while True:
+        c = merged()
+        ch_str = "  ".join(
+            f"{name}={'ON' if c['channels'][name] else 'OFF'}" for name in CHANNELS
+        )
+        print("\n" + "=" * 46)
+        print("  psiu config")
+        print(f"  arquivo: {CONFIG_PATH}")
+        print("=" * 46)
+        print(f"  1) Voz, rate, volume        [{c['voice'] or 'default'} · rate {c['rate'] or 'default'}]")
+        print(f"  2) Frases TTS               [stop: {c['phrases']['stop']!r}]")
+        print(f"  3) Toasts (popup)")
+        print(f"  4) Sons do sistema")
+        print(f"  5) Canais on/off            [{ch_str}]")
+        print(f"  6) Esperto (quiet/CWD)      [quiet {c['quiet'] or 'off'} · cwd {'on' if c['include_cwd'] else 'off'}]")
+        print(f"  7) Webhook + log            [{'webhook on' if c['webhook_url'] else 'webhook off'} · {'log on' if c['log_file'] else 'log off'}]")
+        print(f"  8) Mostrar config (JSON)")
+        print(f"  9) Reset")
+        print(f"  q) Sair")
+        try:
+            ch = input("\n  Escolha: ").strip().lower()
+        except (EOFError, KeyboardInterrupt):
+            print()
+            return
+        if ch in ("q", "0", ""):
+            print("\n  bye!")
+            return
+        handlers = {
+            "1": _menu_voice,
+            "2": _menu_phrases,
+            "3": _menu_toasts,
+            "4": _menu_sounds,
+            "5": _menu_channels,
+            "6": _menu_smart,
+            "7": _menu_webhook_log,
+            "8": _menu_show,
+            "9": _menu_reset,
+        }
+        h = handlers.get(ch)
+        if h:
+            try:
+                h()
+            except (EOFError, KeyboardInterrupt):
+                print()
+                return
+        else:
+            print(f"  opção inválida: {ch}")
 
 
 COMMANDS = {
@@ -453,6 +756,7 @@ COMMANDS = {
     "edit": cmd_edit,
     "voices": cmd_voices,
     "sounds": cmd_sounds,
+    "menu": cmd_menu,
     "help": cmd_help,
     "-h": cmd_help,
     "--help": cmd_help,

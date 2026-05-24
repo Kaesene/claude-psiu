@@ -63,6 +63,16 @@ Events: `stop`, `stop_failure`, `notification`. Channels: `sound`, `toast`, `tts
 
 You can also edit `~/.claude/psiu.json` by hand — it's just JSON. Missing keys fall back to defaults; only what you explicitly set overrides.
 
+### Interactive menu (no Claude tokens)
+
+For browsing without remembering subcommand syntax, run the menu mode **in your own terminal** (or via Claude Code's `!` prefix which gives you a real shell):
+
+```
+!python "~/.claude/plugins/cache/claude-psiu/psiu/<version>/scripts/psiu-config.py" menu
+```
+
+This launches a numbered TUI that walks you through every option, shows the current value inline, and writes to `~/.claude/psiu.json` directly. Zero AI involvement — no tokens, no latency.
+
 ## Example psiu.json
 
 ```json
